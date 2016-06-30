@@ -35,6 +35,8 @@ public class ConnectorServer {
 			arg0.pipeline().addLast(new LineBasedFrameDecoder(1024));
 	        arg0.pipeline().addLast(new StringDecoder());		
 			arg0.pipeline().addLast(new ConnectorHandler());
+			
+			System.out.println("ChildChannelHandler:" + arg0.remoteAddress() +"连接上");
 		}
 	} 
 	
