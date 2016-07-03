@@ -1,10 +1,13 @@
 package com.service;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
 
 import com.alibaba.fastjson.JSON;
 import com.entry.Login;
+import com.entry.Message;
 import com.entry.Proto;
 import com.entry.Push;
 import com.entry.Success;
@@ -48,6 +51,8 @@ public class ConnectorHandler extends ChannelHandlerAdapter{
 		Proto proto = JSON.parseObject(body, Proto.class);
 		System.out.println(body);
 		
+		System.out.println("channelRead:"+ctx.channel().remoteAddress());
+		
 		switch(proto.getAction()) {
 			case "auth":
 				Login login = new Login();
@@ -55,30 +60,65 @@ public class ConnectorHandler extends ChannelHandlerAdapter{
 				login.setUid(proto.getUid());
 				Boolean status = this.Login(login, ctx);
 				
+				Success su1 = new Success();
+				su1.setAction("ret");
+				su1.setEc(200);
+				su1.setEm("login success");
+				
+				String cmd = JSON.toJSON(su1).toString();
+				System.out.println(cmd);
+			    ctx.writeAndFlush(this.buildRespBody(cmd));
+				break;
+			case "msg":
+				System.out.println("msg:"+ctx.channel().remoteAddress());
+				
+				String to = proto.getTo();
+				
+				ChannelHandlerContext toc = userMap.get(to);
+				
+				//ChannelHandlerContext toc = this.foreachMap(to);
+				
+				if(toc != null) {
+					System.out.println("channelRead->msg:"+toc.channel().remoteAddress());
+					
+					Success su = new Success();
+					su.setAction("ret");
+					su.setEc(200);
+					su.setEm("返回消息");
+					
+					String scmd = JSON.toJSON(su).toString();
+					toc.writeAndFlush(this.buildRespBody(scmd));	
+				}				
+				
+				break;
+			case "msg-sync":
+				/*
+				System.out.println("msg-sync");
+				
 				Push push = new Push();
 				push.setAction("msg-psh");
 				push.setFr("9527");
 				
-				String cmd = JSON.toJSON(push).toString();
-				System.out.println(cmd);
-			    ctx.writeAndFlush(this.buildRespBody(cmd));
-				break;
-			case "msg-send":
-				
-				break;
-			case "msg-sync":
-				System.out.println("msg-sync");
-				Success su = new Success();
-				su.setAction("ret");
-				su.setEc(200);
-				su.setEm("sync");
-				
 				String cmd1 = JSON.toJSON(su).toString();
 			    ctx.writeAndFlush(this.buildRespBody(cmd1));
+			    */
 				break;
 			default :
 				break;
 		}
+	}
+	
+	private ChannelHandlerContext foreachMap(String to) {
+		ChannelHandlerContext tctx = null;
+		for (Entry<String, ChannelHandlerContext> entry : userMap.entrySet()) {
+			System.out.println("k:"+ to + "--" +entry.getKey());
+			String tto = entry.getKey();
+			if(to.equals(tto)) {
+				//tctx = entry.getValue(); 
+			}
+		}
+		System.out.println("sy:" + tctx.channel().remoteAddress());
+		return tctx; 
 	}
 	
 	@Override
